@@ -5,7 +5,6 @@ import Link from 'next/link';
 export default function ProductList() {
   const [products, setProducts] = useState([]);
   
-  // สถานะสำหรับการค้นหาและเรียงลำดับ (แพงไปถูกเป็นค่าเริ่มต้น)
   const [search, setSearch] = useState({ 
     name: '', 
     sort: 'desc' 
@@ -42,6 +41,17 @@ export default function ProductList() {
 
   useEffect(() => { fetchProducts(); }, []);
 
+  // ฟังก์ชันช่วยตรวจสอบ URL รูปภาพ
+  const getImageUrl = (url: string) => {
+    if (!url) return '';
+    // ถ้าเป็น Base64 (มีคำว่า data:image) ให้ใช้ค่านั้นเลย ไม่ต้องเติม localhost
+    if (url.startsWith('data:')) {
+        return url;
+    }
+    // ถ้าเป็นชื่อไฟล์ปกติ ค่อยเติม localhost
+    return `http://localhost:3000/${url}`;
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 font-sans bg-purple-50/30 min-h-screen">
       
@@ -62,7 +72,7 @@ export default function ProductList() {
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-300">🔍</span>
             <input 
               placeholder="ค้นหาชื่อสินค้าที่ต้องการ..." 
-              className="w-full pl-11 pr-4 py-3 rounded-2xl border border-purple-100 focus:ring-4 focus:ring-purple-50 focus:border-purple-300 outline-none transition-all placeholder:text-slate-300 shadow-sm" 
+              className="w-full pl-11 pr-4 py-3 rounded-2xl border border-purple-100 focus:ring-4 focus:ring-purple-50 focus:border-purple-300 outline-none transition-all text-black placeholder:text-gray-500 shadow-sm" 
               value={search.name}
               onChange={(e) => setSearch({...search, name: e.target.value})} 
               onKeyDown={(e) => e.key === 'Enter' && fetchProducts()}
@@ -81,8 +91,8 @@ export default function ProductList() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-purple-50/50">
+              <th className="p-5 text-left text-purple-900 font-black uppercase tracking-wider w-32">รูปภาพ</th>
               <th className="p-5 text-left text-purple-900 font-black uppercase tracking-wider">ชื่อสินค้า</th>
-              <th className="p-5 text-left text-purple-900 font-black uppercase tracking-wider">รายละเอียด</th>
               <th className="p-5 text-left text-purple-900 font-black uppercase tracking-wider">สีที่มี</th>
               <th className="p-5 text-left text-purple-900 font-black uppercase tracking-wider text-center">ราคา (แพงไปถูก)</th>
               <th className="p-5 text-center text-purple-900 font-black uppercase tracking-wider">จัดการ</th>
@@ -91,35 +101,59 @@ export default function ProductList() {
           <tbody className="divide-y divide-purple-50">
             {products.map((p: any) => (
               <tr key={p._id} className="hover:bg-purple-50/30 transition-colors group">
+                {/* --- แก้ไขส่วนแสดงรูปภาพ --- */}
                 <td className="p-5">
-                  <Link href={`/product/${p._id}/detail`} className="text-purple-600 font-black text-base hover:text-purple-800 transition-colors hover:underline decoration-2 underline-offset-4">
+                   {p.imageUrl ? (
+                     // ปรับขนาดจาก w-16 เป็น w-24 (96px) หรือ w-32 (128px) ตามต้องการ
+                     <div className="w-24 h-24 rounded-2xl overflow-hidden border border-purple-100 shadow-sm relative group-hover:scale-105 transition-transform duration-300 bg-white">
+                       <img 
+                         src={getImageUrl(p.imageUrl)} 
+                         alt={p.name}
+                         className="w-full h-full object-contain p-1" // ใช้ object-contain เพื่อให้เห็นรูปครบไม่โดนตัด
+                         onError={(e) => {
+                           (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=No+Img';
+                         }}
+                       />
+                     </div>
+                   ) : (
+                     <div className="w-24 h-24 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-300 text-xs font-bold border border-purple-100">
+                       NO IMG
+                     </div>
+                   )}
+                </td>
+                {/* ------------------------- */}
+                <td className="p-5">
+                  <Link href={`/product/${p._id}/detail`} className="text-purple-600 font-black text-lg hover:text-purple-800 transition-colors hover:underline decoration-2 underline-offset-4">
                     {p.name}
                   </Link>
-                </td>
-                <td className="p-5 text-slate-500 italic max-w-xs truncate">
-                  {p.description || '-'}
                 </td>
                 <td className="p-5">
                   <div className="flex gap-2 flex-wrap">
                     {p.colors && p.colors.length > 0 ? (
                       p.colors.map((c: string) => (
-                        <div 
+                        <span 
                           key={c} 
-                          className="w-5 h-5 rounded-full border-2 border-white shadow-md ring-1 ring-purple-100" 
-                          style={{ backgroundColor: c.toLowerCase() }}
-                          title={c}
-                        ></div>
+                          className="bg-purple-100 text-purple-900 px-2 py-1 rounded-lg text-xs font-bold border border-purple-200"
+                        >
+                          {c}
+                        </span>
                       ))
                     ) : (
                       <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter">ไม่มีข้อมูลสี</span>
                     )}
                   </div>
                 </td>
-                <td className="p-5 font-black text-violet-800 text-center text-base">
+                <td className="p-5 font-black text-violet-800 text-center text-lg">
                     ฿{p.price.toLocaleString()}
                 </td>
                 <td className="p-5">
-                  <div className="flex justify-center gap-4">
+                  <div className="flex justify-center gap-2">
+                    <Link 
+                      href={`/product/${p._id}/detail`} 
+                      className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl font-bold hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                    >
+                      ดูรายละเอียด
+                    </Link>
                     <Link 
                       href={`/product/${p._id}`} 
                       className="bg-purple-50 text-purple-600 px-4 py-2 rounded-xl font-bold hover:bg-purple-600 hover:text-white transition-all shadow-sm"
